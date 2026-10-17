@@ -189,9 +189,9 @@ Instead of running slow SQL aggregations repeatedly in Flask view functions, all
 
 ---
 
-## 8. Interview Talking Points
+## 8. Keypoints
 
-If asked to present this project in a Data Science or Analytics interview:
+
 
 - **Business Understanding**: "I built a supermarket analytics platform to bridge operational POS transactions with strategic inventory control."
 - **Data Architecture**: "I designed an ORM schema with strict relationships between products, categories, sales, and line items, ensuring data integrity during purchases."
