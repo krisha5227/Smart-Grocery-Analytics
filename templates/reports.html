@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Business Reports | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Business Reports & CSV Data Export{% endblock %}
+
+{% block content %}
+<!-- Report Type Selector & Export Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('reports.index', type='sales') }}" class="btn {% if report_type == 'sales' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-receipt me-1"></i> Sales Report
+            </a>
+            <a href="{{ url_for('reports.index', type='inventory') }}" class="btn {% if report_type == 'inventory' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-box-seam me-1"></i> Inventory Report
+            </a>
+            <a href="{{ url_for('reports.index', type='performance') }}" class="btn {% if report_type == 'performance' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                <i class="bi bi-graph-up me-1"></i> Product Performance
+            </a>
+        </div>
+
+        <div>
+            <a href="{{ url_for('reports.export_csv', report_type=report_type) }}" class="btn btn-success rounded-pill px-4 shadow-sm">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export {{ report_type | capitalize }} to CSV
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Report Data Preview Table -->
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-dark">
+            <i class="bi bi-table me-2 text-primary"></i>
+            {% if report_type == 'sales' %}
+                Sales Transaction Report Preview
+            {% elif report_type == 'inventory' %}
+                Inventory Stock & Reorder Status Report Preview
+            {% else %}
+                Product Performance & Profit Margin Report Preview
+            {% endif %}
+        </h6>
+        <span class="badge bg-light text-dark border">Pandas Generated</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            {% if report_type == 'sales' %}
+            <table class="table table-custom align-middle m-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Revenue</th>
+                        <th>Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in sales_data %}
+                    <tr>
+                        <td>{{ row.sale_date }}</td>
+                        <td class="fw-bold text-primary">{{ row.invoice_number }}</td>
+                        <td class="fw-bold">{{ row.product_name }}</td>
+                        <td>{{ row.category_name }}</td>
+                        <td>{{ row.quantity }}</td>
+                        <td class="fw-bold">{{ row.subtotal | currency }}</td>
+                        <td class="text-success fw-bold">+{{ row.profit | currency }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center py-4 text-muted">No sales data available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% elif report_type == 'inventory' %}
+            <table class="table table-custom align-middle m-0">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Current Stock</th>
+                        <th>Reorder Level</th>
+                        <th>Status</th>
+                        <th>Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in inventory_data %}
+                    <tr>
+                        <td class="fw-bold">{{ row.product_name }}</td>
+                        <td>{{ row.category_name }}</td>
+                        <td class="fw-bold">{{ row.stock_quantity }}</td>
+                        <td>{{ row.reorder_level }}</td>
+                        <td>
+                            {% if row.status == 'In Stock' %}
+                                <span class="badge-in-stock">In Stock</span>
+                            {% elif row.status == 'Low Stock' %}
+                                <span class="badge-low-stock">Low Stock</span>
+                            {% else %}
+                                <span class="badge-out-of-stock">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.supplier }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No inventory data available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% elif report_type == 'performance' %}
+            <table class="table table-custom align-middle m-0">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Units Sold</th>
+                        <th>Revenue</th>
+                        <th>Profit</th>
+                        <th>Last Sale Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in perf_data %}
+                    <tr>
+                        <td class="fw-bold">{{ row.product_name }}</td>
+                        <td>{{ row.category_name }}</td>
+                        <td>{{ row.units_sold }}</td>
+                        <td class="fw-bold text-primary">{{ row.revenue | currency }}</td>
+                        <td class="text-success fw-bold">+{{ row.profit | currency }}</td>
+                        <td>{{ row.last_sale_date }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No product performance data available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

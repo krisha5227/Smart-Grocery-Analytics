@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice {{ sale.invoice_number }} | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Transaction Receipt & Invoice{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="text-end mb-3 no-print">
+            <button onclick="window.print()" class="btn btn-outline-secondary me-2">
+                <i class="bi bi-printer me-1"></i> Print Invoice
+            </button>
+            <a href="{{ url_for('sales.download_invoice_pdf', id=sale.id) }}" class="btn btn-danger">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Download PDF
+            </a>
+            <a href="{{ url_for('sales.new_sale') }}" class="btn btn-primary ms-2">
+                <i class="bi bi-cart-plus me-1"></i> New Sale
+            </a>
+        </div>
+
+        <!-- Invoice Card Layout -->
+        <div class="card border-0 shadow-lg rounded-4 invoice-card">
+            <div class="card-body p-5">
+                <!-- Header -->
+                <div class="text-center pb-4 border-bottom">
+                    <h2 class="fw-bold text-dark mb-1">SMART GROCERY STORE</h2>
+                    <p class="text-muted small m-0">123 Supermarket Avenue, Cityville | GSTIN: 27AAAAA0000A1Z5</p>
+                    <p class="text-muted small m-0">Contact: +91 98765 43210 | Email: support@smartgrocery.local</p>
+                </div>
+
+                <!-- Invoice Info Grid -->
+                <div class="row py-4">
+                    <div class="col-6">
+                        <small class="text-muted text-uppercase d-block fw-bold mb-1">Billed To:</small>
+                        <h6 class="fw-bold text-dark m-0">{{ sale.customer_name or 'Walk-in Customer' }}</h6>
+                    </div>
+                    <div class="col-6 text-end">
+                        <small class="text-muted text-uppercase d-block fw-bold mb-1">Invoice Details:</small>
+                        <div class="fw-bold text-primary fs-5">{{ sale.invoice_number }}</div>
+                        <div class="text-muted small">Date: {{ sale.sale_date.strftime('%d-%m-%Y %H:%M') }}</div>
+                    </div>
+                </div>
+
+                <!-- Itemized Products Table -->
+                <div class="table-responsive mb-4">
+                    <table class="table align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Product</th>
+                                <th>Unit</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in sale.items %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="fw-bold">{{ item.product.product_name if item.product else 'Product' }}</td>
+                                <td>{{ item.product.unit if item.product else '' }}</td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">{{ item.selling_price | currency }}</td>
+                                <td class="text-end fw-bold">{{ item.subtotal | currency }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="5" class="text-end fw-bold fs-5">Total Amount:</td>
+                                <td class="text-end fw-bold fs-4 text-primary">{{ sale.total_amount | currency }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Footer Thank You Note -->
+                <div class="text-center pt-3 border-top">
+                    <p class="fst-italic text-muted m-0">Thank you for shopping with Smart Grocery Store!</p>
+                    <small class="text-muted">Please retain this receipt for returns or exchanges within 7 days.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

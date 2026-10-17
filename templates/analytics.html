@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Analytics | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Deep Dive Sales & Performance Analytics{% endblock %}
+
+{% block content %}
+<!-- Interactive Filters Card -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body py-3">
+        <form id="analyticsFilterForm" class="row g-2 align-items-center" onsubmit="event.preventDefault();">
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold mb-1">Start Date</label>
+                <input type="date" id="startDateFilter" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold mb-1">End Date</label>
+                <input type="date" id="endDateFilter" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold mb-1">Category</label>
+                <select id="categoryFilter" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.category_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-muted small fw-bold mb-1">Product</label>
+                <select id="productFilter" class="form-select form-select-sm">
+                    <option value="">All Products</option>
+                    {% for p in products %}
+                    <option value="{{ p.id }}">{{ p.product_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12 text-end mt-2">
+                <button type="button" id="resetAnalyticsFilters" class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-2">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                </button>
+                <button type="button" id="applyAnalyticsFilters" class="btn btn-sm btn-primary rounded-pill px-4">
+                    <i class="bi bi-funnel-fill me-1"></i> Apply Analytics Filters
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Dynamic Filtered KPIs Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-title">Revenue</span>
+            <h3 id="metricRevenue" class="kpi-value text-primary">₹0.00</h3>
+            <small class="text-muted">Total Sales</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-title">Profit</span>
+            <h3 id="metricProfit" class="kpi-value text-success">₹0.00</h3>
+            <small class="text-muted">Net Earnings</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-title">Units Sold</span>
+            <h3 id="metricUnits" class="kpi-value text-warning">0</h3>
+            <small class="text-muted">Total Items</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <span class="kpi-title">Avg Tx Value</span>
+            <h3 id="metricAvgTx" class="kpi-value text-dark">₹0.00</h3>
+            <small class="text-muted">Per Customer Basket</small>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Charts Grid -->
+<div class="row g-4 mb-4">
+    <!-- Chart 1: Monthly Revenue Trend -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-graph-up me-2 text-primary"></i>Monthly Revenue Trend</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsMonthlyRevChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2: Monthly Profit Trend -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-graph-up-arrow me-2 text-success"></i>Monthly Profit Trend</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsMonthlyProfChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: Category Revenue -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-bar-chart-line me-2 text-primary"></i>Category Revenue Breakdown</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsCatRevChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Category Profit -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-bar-chart-fill me-2 text-success"></i>Category Profit Breakdown</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsCatProfChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 5: Top Products -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-award-fill me-2 text-purple"></i>Top Products by Revenue</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsTopProductsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 6: Daily Sales Trend -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-3 pb-0">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-calendar-event me-2 text-warning"></i>Daily Sales Trend</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="analyticsDailyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 7: Units Sold by Category -->
+    <div class="col-lg-12">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 pt-3 pb-0 text-center">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-pie-chart-fill me-2 text-info"></i>Units Sold Share by Category</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 260px;">
+                    <canvas id="analyticsCatUnitsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

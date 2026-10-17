@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales History | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Sales Transactions History{% endblock %}
+
+{% block content %}
+<!-- Search & Header Bar -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="{{ url_for('sales.sales_history') }}" class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control bg-light border-start-0" placeholder="Search by Invoice No or Customer Name..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-secondary w-100">Filter Sales</button>
+            </div>
+            <div class="col-md-3 text-end">
+                <a href="{{ url_for('sales.new_sale') }}" class="btn btn-primary rounded-pill w-100">
+                    <i class="bi bi-cart-plus me-1"></i> New Sale POS
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Sales History Table -->
+<div class="card border-0 shadow-sm rounded-4 mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-custom align-middle m-0">
+                <thead>
+                    <tr>
+                        <th>Invoice No</th>
+                        <th>Sale Date</th>
+                        <th>Customer</th>
+                        <th>Items Purchased</th>
+                        <th>Total Amount</th>
+                        <th>Total Profit</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in sales %}
+                    <tr>
+                        <td class="fw-bold text-primary">{{ sale.invoice_number }}</td>
+                        <td>{{ sale.sale_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ sale.customer_name or 'Walk-in Customer' }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ sale.items | length }} item(s)</span></td>
+                        <td class="fw-bold fs-6">{{ sale.total_amount | currency }}</td>
+                        <td class="text-success fw-bold">+{{ sale.total_profit | currency }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('sales.view_invoice', id=sale.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="bi bi-eye"></i> View Invoice
+                            </a>
+                            <a href="{{ url_for('sales.download_invoice_pdf', id=sale.id) }}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">No transaction history found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination Controls -->
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('sales.sales_history', page=pagination.prev_num, search=search) }}">Previous</a>
+        </li>
+        {% for page_num in pagination.iter_pages() %}
+            {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('sales.sales_history', page=page_num, search=search) }}">{{ page_num }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('sales.sales_history', page=pagination.next_num, search=search) }}">Next</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

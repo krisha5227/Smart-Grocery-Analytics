@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Analytics | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Advanced Inventory Analytics & Stock Control{% endblock %}
+
+{% block content %}
+<!-- Top Stock Status Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-success border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small text-uppercase fw-bold">In Stock Products</span>
+                    <h3 class="m-0 fw-bold text-success">{{ status_counts.in_stock }}</h3>
+                </div>
+                <div class="kpi-icon-box bg-success-subtle text-success">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-warning border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small text-uppercase fw-bold">Low Stock Products</span>
+                    <h3 class="m-0 fw-bold text-warning">{{ status_counts.low_stock }}</h3>
+                </div>
+                <div class="kpi-icon-box bg-warning-subtle text-warning">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-danger border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="text-muted small text-uppercase fw-bold">Out of Stock Products</span>
+                    <h3 class="m-0 fw-bold text-danger">{{ status_counts.out_of_stock }}</h3>
+                </div>
+                <div class="kpi-icon-box bg-danger-subtle text-danger">
+                    <i class="bi bi-x-circle-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabs Navigation for Advanced Analytics -->
+<ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="inventoryTabs" role="tablist">
+    <li class="nav-item">
+        <button class="nav-link active rounded-pill px-4" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button">
+            <i class="bi bi-box-seam me-1"></i> General Stock Overview
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link rounded-pill px-4 text-purple" id="deadstock-tab" data-bs-toggle="tab" data-bs-target="#deadstock" type="button">
+            <i class="bi bi-hourglass-bottom me-1"></i> Dead Stock Detection
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link rounded-pill px-4 text-primary" id="turnover-tab" data-bs-toggle="tab" data-bs-target="#turnover" type="button">
+            <i class="bi bi-arrow-repeat me-1"></i> Inventory Turnover
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link rounded-pill px-4 text-warning" id="reorder-tab" data-bs-toggle="tab" data-bs-target="#reorder" type="button">
+            <i class="bi bi-cart-plus me-1"></i> Reorder Recommendations
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="inventoryTabsContent">
+    <!-- Tab 1: General Stock Overview -->
+    <div class="tab-pane fade show active" id="overview">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-list-columns-reverse me-2 text-primary"></i>All Product Stock Levels</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Current Stock</th>
+                                <th>Reorder Level</th>
+                                <th>Stock Status</th>
+                                <th>Units Sold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in products %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ p.product_name }}</td>
+                                <td><span class="badge bg-light text-dark border">{{ p.category.category_name }}</span></td>
+                                <td class="fw-bold fs-6">{{ p.stock_quantity }} {{ p.unit }}</td>
+                                <td>{{ p.reorder_level }} {{ p.unit }}</td>
+                                <td>
+                                    {% if p.stock_status == 'In Stock' %}
+                                        <span class="badge-in-stock">In Stock</span>
+                                    {% elif p.stock_status == 'Low Stock' %}
+                                        <span class="badge-low-stock">Low Stock</span>
+                                    {% else %}
+                                        <span class="badge-out-of-stock">Out of Stock</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ p.sale_items | sum(attribute='quantity') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 2: Dead Stock Analysis -->
+    <div class="tab-pane fade" id="deadstock">
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body py-3">
+                <form method="GET" action="{{ url_for('inventory.index') }}" class="row g-2 align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold mb-0">Dead Stock Inactivity Threshold (Days)</label>
+                        <div class="input-group">
+                            <input type="number" name="dead_days" class="form-control" value="{{ dead_stock_days }}" min="1">
+                            <button type="submit" class="btn btn-secondary">Apply Threshold</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h6 class="m-0 font-weight-bold text-purple"><i class="bi bi-hourglass-split me-2"></i>Dead Stock Items (No sales for {{ dead_stock_days }}+ days)</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Current Stock</th>
+                                <th>Capital Tied Up</th>
+                                <th>Last Sale Date</th>
+                                <th>Days Inactive</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in dead_stock %}
+                            <tr>
+                                <td class="fw-bold">{{ d.product_name }}</td>
+                                <td>{{ d.category_name }}</td>
+                                <td class="fw-bold text-danger">{{ d.stock_quantity }} {{ d.unit }}</td>
+                                <td class="fw-bold text-dark">{{ d.tied_up_capital | currency }}</td>
+                                <td>{{ d.last_sale_date }}</td>
+                                <td><span class="badge bg-purple-subtle text-purple fw-bold">{{ d.days_since_last_sale }} days</span></td>
+                                <td><span class="badge-dead-stock">Dead Stock</span></td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-muted">No dead stock detected based on the {{ dead_stock_days }}-day threshold. Great inventory flow!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 3: Inventory Turnover Analysis -->
+    <div class="tab-pane fade" id="turnover">
+        <div class="alert alert-primary border-0 rounded-4 mb-3">
+            <h6 class="fw-bold m-0"><i class="bi bi-info-circle me-2"></i>Inventory Turnover Metric Explanation</h6>
+            <small>
+                <strong>Formula:</strong> <code>Inventory Turnover = Cost of Goods Sold (COGS) / Average Inventory Value</code><br>
+                Higher turnover indicates fast-selling products with efficient stock usage, whereas lower turnover indicates slow-moving inventory.
+            </small>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h6 class="m-0 font-weight-bold text-primary"><i class="bi bi-arrow-repeat me-2"></i>Inventory Turnover by Product</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>COGS (Cost of Goods Sold)</th>
+                                <th>Units Sold</th>
+                                <th>Avg Inventory Value</th>
+                                <th>Turnover Ratio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in turnover %}
+                            <tr>
+                                <td class="fw-bold">{{ t.product_name }}</td>
+                                <td>{{ t.category_name }}</td>
+                                <td class="fw-bold">{{ t.cogs | currency }}</td>
+                                <td>{{ t.units_sold }}</td>
+                                <td class="text-muted">{{ t.avg_inventory_val | currency }}</td>
+                                <td>
+                                    <span class="badge {% if t.turnover_ratio >= 3.0 %}bg-success-subtle text-success{% elif t.turnover_ratio >= 1.0 %}bg-primary-subtle text-primary{% else %}bg-warning-subtle text-warning{% endif %} fw-bold fs-6">
+                                        {{ t.turnover_ratio }}x
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No turnover data available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Reorder Recommendations -->
+    <div class="tab-pane fade" id="reorder">
+        <div class="card border-0 shadow-sm rounded-4 mb-3">
+            <div class="card-body py-3">
+                <form method="GET" action="{{ url_for('inventory.index') }}" class="row g-2 align-items-center">
+                    <div class="col-md-6">
+                        <label class="form-label text-muted small fw-bold mb-0">Configured Target Max Stock Level</label>
+                        <div class="input-group">
+                            <input type="number" name="max_stock" class="form-control" value="{{ max_stock }}" min="50">
+                            <button type="submit" class="btn btn-warning">Update Max Stock Level</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-0 py-3">
+                <h6 class="m-0 font-weight-bold text-warning"><i class="bi bi-cart-plus-fill me-2"></i>Reorder Recommendation List</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom align-middle m-0">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Current Stock</th>
+                                <th>Reorder Level</th>
+                                <th>Suggested Reorder Qty</th>
+                                <th>Est. Purchase Cost</th>
+                                <th>Supplier</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in reorder_list %}
+                            <tr>
+                                <td class="fw-bold">{{ r.product_name }}</td>
+                                <td>{{ r.category_name }}</td>
+                                <td class="fw-bold text-danger">{{ r.current_stock }} {{ r.unit }}</td>
+                                <td>{{ r.reorder_level }} {{ r.unit }}</td>
+                                <td><span class="badge bg-warning text-dark fw-bold fs-6">+{{ r.suggested_reorder_qty }} {{ r.unit }}</span></td>
+                                <td class="fw-bold text-dark">{{ r.estimated_reorder_cost | currency }}</td>
+                                <td>{{ r.supplier_name }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('products.update_stock', id=r.product_id) }}" class="d-inline">
+                                        <input type="hidden" name="added_stock" value="{{ r.suggested_reorder_qty }}">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <i class="bi bi-check2-circle me-1"></i> Quick Reorder
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">All product stock levels are above reorder thresholds. No reorder required right now!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

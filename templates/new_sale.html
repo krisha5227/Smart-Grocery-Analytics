@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}New Sale (POS) | Smart Grocery Analytics{% endblock %}
+{% block page_title %}Point of Sale (POS) - New Sale Transaction{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Product Selector Card -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-cart-plus me-2 text-primary"></i>Add Items to Cart</h6>
+                <span class="badge bg-light text-muted border">Quick Billing</span>
+            </div>
+            <div class="card-body">
+                <form id="posAddForm" onsubmit="event.preventDefault(); addSelectedItemToCart();">
+                    <!-- Category Filter Dropdown -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Filter by Category</label>
+                        <select id="posCategoryFilter" class="form-select" onchange="filterPosProducts()">
+                            <option value="">All Categories</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.category_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Search Product Input -->
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Search Product</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="posSearchInput" class="form-control bg-light border-start-0" placeholder="Type name to filter..." oninput="filterPosProducts()">
+                        </div>
+                    </div>
+
+                    <!-- Product Select Dropdown -->
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">Select Product *</label>
+                        <select id="productSelect" class="form-select form-select-lg" required>
+                            <option value="">-- Choose Product --</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}" 
+                                    data-category="{{ p.category_id }}"
+                                    data-name="{{ p.product_name }}"
+                                    data-price="{{ p.selling_price }}"
+                                    data-cost="{{ p.cost_price }}"
+                                    data-stock="{{ p.stock_quantity }}"
+                                    data-reorder="{{ p.reorder_level }}"
+                                    data-unit="{{ p.unit }}"
+                                    {% if p.stock_quantity == 0 %}disabled{% endif %}>
+                                {{ p.product_name }} - ₹{{ "%.2f"|format(p.selling_price) }} / {{ p.unit }} {% if p.stock_quantity == 0 %}(Out of Stock){% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Unit Price</label>
+                            <input type="text" id="posPriceDisplay" class="form-control bg-light fw-bold text-primary" value="₹0.00" readonly>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Availability</label>
+                            <div id="posStockBadge" class="form-control bg-light text-muted small border-0 pt-2 text-truncate">
+                                Stock: Select product
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-dark fw-bold">Purchase Quantity *</label>
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="stepQty(-1)">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                            <input type="number" id="posQtyInput" class="form-control form-control-lg text-center fw-bold" value="1" min="1" required>
+                            <button type="button" class="btn btn-outline-secondary" onclick="stepQty(1)">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                            <button type="button" id="addToCartBtn" class="btn btn-primary btn-lg px-4 ms-2">
+                                <i class="bi bi-cart-plus-fill me-1"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div class="alert alert-info border-0 rounded-3 mb-0 small">
+                    <i class="bi bi-info-circle me-1"></i> <strong>Note:</strong> Product stock will decrease automatically when transaction completes. Historical data is preserved for analytics.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Cart Table & Checkout Card -->
+    <div class="col-lg-7">
+        <form id="posCheckoutForm">
+            <div class="card border-0 shadow-sm rounded-4 mb-3">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <h6 class="m-0 font-weight-bold text-dark"><i class="bi bi-bag-check me-2 text-success"></i>Transaction Items</h6>
+                        <span class="badge bg-primary rounded-pill"><span id="totalItemsDisplay">0</span> items</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearCart()">
+                        <i class="bi bi-trash me-1"></i> Clear Cart
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                        <table class="table table-custom align-middle m-0">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
+                                    <th>Est. Profit</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cartTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">Cart is empty. Select a product on the left to add.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer & Totals Summary -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold">Customer Name (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                                <input type="text" id="customerNameInput" class="form-control bg-light border-start-0" placeholder="Walk-in Customer">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="pos-summary-box">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="text-muted">Net Profit:</span>
+                                    <span id="totalProfitDisplay" class="fw-bold text-success">₹0.00</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <span class="fs-5 fw-bold text-dark">Grand Total:</span>
+                                    <span id="grandTotalDisplay" class="fs-3 fw-bold text-primary">₹0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 text-end">
+                        <button type="submit" id="submitSaleBtn" class="btn btn-success btn-lg px-5 rounded-pill shadow-sm">
+                            <i class="bi bi-check-circle me-1"></i> Complete & Generate Invoice
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/sales.js') }}"></script>
+{% endblock %}
